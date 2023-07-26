@@ -1,0 +1,14 @@
+{
+    "title": "Sandbox Snuggle Struggle",
+    "type": "weapon",
+    "tags": [
+        "realism",
+        "fun"
+    ],
+    "description": "Have fun with your enemies! Cannot be used on Nextbots and weird NPCs!",
+    "ignore": [
+        "*.psd",
+        "*.vcproj",
+        "*.svn"
+    ]
+}
