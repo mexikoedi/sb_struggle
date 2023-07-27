@@ -113,7 +113,7 @@ if SERVER then
             owner:GodDisable()
         end
 
-        -- revert changes from before and add damage
+        -- revert changes from before
         if IsValid(victim) then
             if not victim:IsNPC() and victim:IsPlayer() then
                 victim:UnSpectate()
@@ -143,7 +143,7 @@ if SERVER then
             owner:GodDisable()
         end
 
-        -- revert changes from before and add damage
+        -- revert changes from before
         if IsValid(victim) then
             if not victim:IsNPC() and victim:IsPlayer() then
                 victim:UnSpectate()
