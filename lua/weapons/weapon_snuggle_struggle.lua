@@ -50,7 +50,7 @@ attackerweapons = {}
 victimweapons = {}
 SWEP.ViewModel = Model("models/weapons/v_hands.mdl")
 local Killicon_Color_Icon = Color(255, 255, 255, 255)
-SWEP.RapeLength = 5
+SWEP.SnuggleLength = 5
 SWEP.SoundDelay = 1.5
 local ThrustVelocity = 750
 local boneNames = {"ValveBiped.Bip01_Spine2", "ValveBiped.Bip01_R_UpperArm", "ValveBiped.Bip01_L_UpperArm", "ValveBiped.Bip01_L_Forearm", "ValveBiped.Bip01_L_Hand", "ValveBiped.Bip01_R_Forearm", "ValveBiped.Bip01_R_Hand", "ValveBiped.Bip01_R_Thigh", "ValveBiped.Bip01_R_Calf", "ValveBiped.Bip01_Head1", "ValveBiped.Bip01_L_Thigh", "ValveBiped.Bip01_L_Calf", "ValveBiped.Bip01_L_Foot", "ValveBiped.Bip01_R_Foot",}
@@ -86,7 +86,6 @@ function SWEP:DrawWeaponSelection(x, y, w, h, a)
     self:PrintWeaponInfo(x + 220 + w / 2 - size / 2, y + 170 + h * 0.05, 255)
 end
 
-
 if SERVER then
     -- damage/inflictor code
     local function InstantDamage(ply, damage, attacker, inflictor)
@@ -103,14 +102,115 @@ if SERVER then
         ply:TakeDamageInfo(dmg)
     end
 
+    local function abortVictim(victim, owner, positionVictim, positionOwner, victimRagdoll)
+        if IsValid(owner) then
+            owner:SetPos(positionOwner)
+            owner:SetJumpPower(160)
+            owner:SetCrouchedWalkSpeed(0.3)
+            owner:SetRunSpeed(220)
+            owner:SetWalkSpeed(220)
+            owner:SetMaxSpeed(220)
+            owner:GodDisable()
+        end
+
+        -- revert changes from before and add damage
+        if IsValid(victim) then
+            if not victim:IsNPC() and victim:IsPlayer() then
+                victim:UnSpectate()
+            elseif victim:IsNPC() then
+                victim:SetNoDraw(false)
+            end
+
+            victim:Spawn()
+            victim:SetPos(positionVictim)
+        end
+
+        -- removing victim ragdoll
+        SafeRemoveEntity(victimRagdoll)
+        -- giving weapon back + selecting it
+        owner:Give("weapon_snuggle_struggle")
+        owner:SelectWeapon("weapon_snuggle_struggle")
+    end
+
+    local function abortOwner(victim, owner, positionVictim, positionOwner, victimRagdoll, ownerRagdoll)
+        if IsValid(owner) then
+            owner:SetPos(positionOwner)
+            owner:SetJumpPower(160)
+            owner:SetCrouchedWalkSpeed(0.3)
+            owner:SetRunSpeed(220)
+            owner:SetWalkSpeed(220)
+            owner:SetMaxSpeed(220)
+            owner:GodDisable()
+        end
+
+        -- revert changes from before and add damage
+        if IsValid(victim) then
+            if not victim:IsNPC() and victim:IsPlayer() then
+                victim:UnSpectate()
+            elseif victim:IsNPC() then
+                victim:SetNoDraw(false)
+            end
+
+            victim:Spawn()
+            victim:SetPos(positionVictim)
+        end
+
+        -- removing ragdolls (victim too at this point)
+        SafeRemoveEntity(victimRagdoll)
+        SafeRemoveEntity(ownerRagdoll)
+        -- giving weapon back + selecting it
+        owner:Give("weapon_snuggle_struggle")
+        owner:SelectWeapon("weapon_snuggle_struggle")
+    end
+
+    local function success(victim, owner, positionVictim, positionOwner, victimRagdoll, ownerRagdoll, soundTimerString, thrustTimerString)
+        if IsValid(owner) then
+            if owner:Health() < 100 then
+                owner:SetHealth(100)
+            end
+
+            owner:SetPos(positionOwner)
+            owner:SetJumpPower(160)
+            owner:SetCrouchedWalkSpeed(0.3)
+            owner:SetRunSpeed(220)
+            owner:SetWalkSpeed(220)
+            owner:SetMaxSpeed(220)
+            owner:GodDisable()
+        end
+
+        -- revert changes from before and add damage
+        if IsValid(victim) then
+            if not victim:IsNPC() and victim:IsPlayer() then
+                victim:UnSpectate()
+            elseif victim:IsNPC() then
+                victim:SetNoDraw(false)
+            end
+
+            victim:Spawn()
+            victim:SetPos(positionVictim)
+            -- create damage
+            InstantDamage(victim, 1000, owner, ents.Create("weapon_snuggle_struggle"))
+        end
+
+        -- removing ragdolls and timers
+        SafeRemoveEntity(victimRagdoll)
+        SafeRemoveEntity(ownerRagdoll)
+        timer.Remove(soundTimerString)
+        timer.Remove(thrustTimerString)
+    end
+
     function SWEP:PrimaryAttack()
         -- set up postioning stuff and owner/victim checks
         local owner = self:GetOwner()
         local victim = owner:GetEyeTrace().Entity
         if not IsValid(victim) then return end
-        -- if nextbot then abort
-        if victim:IsNextBot() or not victim:IsNPC() and not victim:IsPlayer() then
-            owner:ChatPrint("Invalid enemy! Aborting!")
+        -- if nextbot or a different entity (not player/npc) then abort
+        if victim:IsNextBot() then
+            owner:ChatPrint("Nextbots are not supported! Aborting!")
+
+            return
+        elseif not victim:IsNPC() and not victim:IsPlayer() then
+            owner:ChatPrint("Invalid entity! Aborting!")
 
             return
         end
@@ -126,7 +226,7 @@ if SERVER then
         positionBase = trace.HitPos or positionBase
         if positionVictim:Distance(positionOwner) > self.Primary.Distance then return end
         owner:EmitSound(self.Primary.Sound)
-        -- set owner to god mode with no movement + position him + remove snuggle struggle + set victim to spectator camera and no movement (if npc then invisible and no weapons)
+        -- set owner to godmode with no movement + position him + remove snuggle struggle + set victim to spectator camera and no movement (if npc then invisible and no weapons)
         owner:GodEnable()
         owner:SetJumpPower(1)
         owner:SetCrouchedWalkSpeed(0.1)
@@ -154,41 +254,20 @@ if SERVER then
         victimRagdoll:SetPos(positionVictim)
         victimRagdoll:Spawn()
         victimRagdoll:Activate()
+        -- check for invalid bones (weird victim model)
+        if victimRagdoll:GetPhysicsObjectCount() - 1 <= 0 then
+            owner:ChatPrint("Invalid victim model! Aborting!")
+            abortVictim(victim, owner, positionVictim, positionOwner, victimRagdoll)
+
+            return
+        end
+
         for i = 1, victimRagdoll:GetPhysicsObjectCount() - 1 do
             local boneName = boneNames[i]
-            -- check for invalid bones (weird npc)
-            if victimRagdoll:LookupBone(boneName) == nil then
-                owner:ChatPrint("Invalid enemy! Aborting animation!")
-                if IsValid(owner) then
-                    if owner:Health() < 100 then
-                        owner:SetHealth(100)
-                    end
-
-                    owner:SetPos(positionOwner)
-                    owner:SetJumpPower(160)
-                    owner:SetCrouchedWalkSpeed(0.3)
-                    owner:SetRunSpeed(220)
-                    owner:SetWalkSpeed(220)
-                    owner:SetMaxSpeed(220)
-                    owner:GodDisable()
-                end
-
-                -- revert changes from before and add damage
-                if IsValid(victim) then
-                    if not victim:IsNPC() and victim:IsPlayer() then
-                        victim:UnSpectate()
-                    elseif victim:IsNPC() then
-                        victim:SetNoDraw(false)
-                    end
-
-                    victim:Spawn()
-                    victim:SetPos(positionVictim)
-                    -- create damage
-                    InstantDamage(victim, 1000, owner, ents.Create("weapon_snuggle_struggle"))
-                end
-
-                -- removing victim ragdoll
-                SafeRemoveEntity(victimRagdoll)
+            -- check for invalid bones (weird victim model)
+            if boneName == nil or victimRagdoll:LookupBone(boneName) == nil then
+                owner:ChatPrint("Invalid victim model! Aborting!")
+                abortVictim(victim, owner, positionVictim, positionOwner, victimRagdoll)
 
                 return
             end
@@ -210,8 +289,24 @@ if SERVER then
         ownerRagdoll:SetPos(positionOwner)
         ownerRagdoll:Spawn()
         ownerRagdoll:Activate()
+        -- check for invalid bones (weird owner model)
+        if ownerRagdoll:GetPhysicsObjectCount() - 1 <= 0 then
+            owner:ChatPrint("Invalid owner model! Aborting!")
+            abortOwner(victim, owner, positionVictim, positionOwner, victimRagdoll, ownerRagdoll)
+
+            return
+        end
+
         for i = 1, ownerRagdoll:GetPhysicsObjectCount() - 1 do
             local boneName = boneNames[i]
+            -- check for invalid bones (weird owner model)
+            if boneName == nil or ownerRagdoll:LookupBone(boneName) == nil then
+                owner:ChatPrint("Invalid owner model! Aborting!")
+                abortOwner(victim, owner, positionVictim, positionOwner, victimRagdoll, ownerRagdoll)
+
+                return
+            end
+
             local boneId = ownerRagdoll:LookupBone(boneName)
             if boneId ~= nil then
                 local physId = ownerRagdoll:TranslateBoneToPhysBone(boneId)
@@ -227,13 +322,13 @@ if SERVER then
             end
         end
 
-        -- spectate each other and play random sounds
+        -- spectate each other (only if player and not npc) and play random sounds
         owner:SpectateEntity(ownerRagdoll)
         if not victim:IsNPC() and victim:IsPlayer() then
             victim:SpectateEntity(ownerRagdoll)
         end
 
-        local thrustTimerString = "RapeThrust_" .. (owner:SteamID64() or "SINGLEPLAYER")
+        local thrustTimerString = "SnuggleThrust_" .. (owner:SteamID64() or "SINGLEPLAYER")
         local boneName = boneNames[11]
         local boneId = ownerRagdoll:LookupBone(boneName)
         if boneId ~= nil then
@@ -255,7 +350,7 @@ if SERVER then
             end
         end
 
-        local soundTimerString = "EmitRapeSounds_" .. (owner:SteamID64() or "SINGLEPLAYER")
+        local soundTimerString = "EmitSnuggleSounds_" .. (owner:SteamID64() or "SINGLEPLAYER")
         timer.Create(
             soundTimerString,
             self.SoundDelay,
@@ -268,41 +363,9 @@ if SERVER then
 
         -- check health/give health + positioning of owner/victim and letting the owner move again with no godmode
         timer.Simple(
-            self.RapeLength,
+            self.SnuggleLength,
             function()
-                if IsValid(owner) then
-                    if owner:Health() < 100 then
-                        owner:SetHealth(100)
-                    end
-
-                    owner:SetPos(positionOwner)
-                    owner:SetJumpPower(160)
-                    owner:SetCrouchedWalkSpeed(0.3)
-                    owner:SetRunSpeed(220)
-                    owner:SetWalkSpeed(220)
-                    owner:SetMaxSpeed(220)
-                    owner:GodDisable()
-                end
-
-                -- revert changes from before and add damage
-                if IsValid(victim) then
-                    if not victim:IsNPC() and victim:IsPlayer() then
-                        victim:UnSpectate()
-                    elseif victim:IsNPC() then
-                        victim:SetNoDraw(false)
-                    end
-
-                    victim:Spawn()
-                    victim:SetPos(positionVictim)
-                    -- create damage
-                    InstantDamage(victim, 1000, owner, ents.Create("weapon_snuggle_struggle"))
-                end
-
-                -- removing ragdolls and timers
-                SafeRemoveEntity(victimRagdoll)
-                SafeRemoveEntity(ownerRagdoll)
-                timer.Remove(soundTimerString)
-                timer.Remove(thrustTimerString)
+                success(victim, owner, positionVictim, positionOwner, victimRagdoll, ownerRagdoll, soundTimerString, thrustTimerString)
             end
         )
     end
