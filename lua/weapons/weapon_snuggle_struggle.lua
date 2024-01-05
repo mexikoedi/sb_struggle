@@ -61,10 +61,7 @@ local attackerAng = {Angle(-23.909204483032, 21.916522979736, 247.47807312012), 
 local sounds = {"player/crit_death1.wav", "player/crit_death2.wav", "player/crit_death3.wav", "player/crit_death4.wav", "player/crit_death5.wav", "bot/come_to_papa.wav", "bot/im_pinned_down.wav", "bot/oh_man.wav", "bot/yesss.wav", "bot/pain4", "bot/pain5", "bot/pain8", "bot/pain9", "bot/pain10", "bot/stop_it.wav", "bot/help.wav", "bot/i_could_use_some_help.wav", "bot/i_could_use_some_help_over_here.wav", "bot/they_got_me_pinned_down_here.wav", "bot/this_is_my_house.wav", "bot/need_help.wav", "bot/i_am_dangerous.wav", "bot/yikes.wav", "noo.wav", "bot/whos_the_man.wav", "bot/hang_on_im_coming.wav", "hostage/hpain/hpain1.wav", "hostage/hpain/hpain2.wav", "hostage/hpain/hpain3.wav", "hostage/hpain/hpain4.wav", "hostage/hpain/hpain5.wav", "hostage/hpain/hpain6.wav", "vo/k_lab/al_youcoming.wav", "vo/k_lab/kl_ahhhh.wav", "noice.wav",}
 local sounds2 = {"bot/where_are_you_hiding.wav", "vo/NovaProspekt/al_whereareyou03.wav", "vo/Citadel/al_wonderwhere.wav",}
 local sounds3 = {"physics/body/body_medium_break2.wav", "physics/body/body_medium_break3.wav", "physics/body/body_medium_break4.wav", "physics/body/body_medium_impact_hard1.wav", "physics/body/body_medium_impact_hard2.wav", "physics/body/body_medium_impact_hard3.wav", "physics/body/body_medium_impact_hard4.wav", "physics/body/body_medium_impact_hard5.wav", "physics/body/body_medium_impact_hard6.wav",}
-if CLIENT then
-    killicon.Add("weapon_snuggle_struggle", "HUD/killicons/weapon_snuggle_struggle", Killicon_Color_Icon)
-end
-
+if CLIENT then killicon.Add("weapon_snuggle_struggle", "HUD/killicons/weapon_snuggle_struggle", Killicon_Color_Icon) end
 function SWEP:Initialize()
 end
 
@@ -75,10 +72,7 @@ function SWEP:DrawWeaponSelection(x, y, w, h, a)
     surface.SetDrawColor(255, 255, 255, a)
     surface.SetMaterial(self.WepSelectIcon)
     local fsin = 0
-    if self.BounceWeaponIcon == true then
-        fsin = math.sin(CurTime() * 10) * 5
-    end
-
+    if self.BounceWeaponIcon == true then fsin = math.sin(CurTime() * 10) * 5 end
     local size = math.min(w, h) - 32
     surface.DrawTexturedRect(x - 50 + w + fsin / 2 - size - fsin / 2, y + h * 0.05 - fsin * 2, size, size + fsin)
     render.PopFilterMag()
@@ -95,10 +89,7 @@ if SERVER then
         dmg:SetDamageForce(ply:GetAimVector())
         dmg:SetDamagePosition(ply:GetPos())
         dmg:SetDamageType(DMG_GENERIC)
-        if inflictor then
-            dmg:SetInflictor(inflictor)
-        end
-
+        if inflictor then dmg:SetInflictor(inflictor) end
         ply:TakeDamageInfo(dmg)
     end
 
@@ -165,10 +156,7 @@ if SERVER then
 
     local function success(victim, owner, positionVictim, positionOwner, victimRagdoll, ownerRagdoll, soundTimerString, thrustTimerString)
         if IsValid(owner) then
-            if owner:Health() < 100 then
-                owner:SetHealth(100)
-            end
-
+            if owner:Health() < 100 then owner:SetHealth(100) end
             owner:SetPos(positionOwner)
             owner:SetJumpPower(160)
             owner:SetCrouchedWalkSpeed(0.3)
@@ -207,11 +195,9 @@ if SERVER then
         -- if nextbot or a different entity (not player/npc) then abort
         if victim:IsNextBot() then
             owner:ChatPrint("Nextbots are not supported! Aborting!")
-
             return
         elseif not victim:IsNPC() and not victim:IsPlayer() then
             owner:ChatPrint("Invalid entity! Aborting!")
-
             return
         end
 
@@ -258,7 +244,6 @@ if SERVER then
         if victimRagdoll:GetPhysicsObjectCount() - 1 <= 0 then
             owner:ChatPrint("Invalid victim model! Aborting!")
             abortVictim(victim, owner, positionVictim, positionOwner, victimRagdoll)
-
             return
         end
 
@@ -268,7 +253,6 @@ if SERVER then
             if boneName == nil or victimRagdoll:LookupBone(boneName) == nil then
                 owner:ChatPrint("Invalid victim model! Aborting!")
                 abortVictim(victim, owner, positionVictim, positionOwner, victimRagdoll)
-
                 return
             end
 
@@ -293,7 +277,6 @@ if SERVER then
         if ownerRagdoll:GetPhysicsObjectCount() - 1 <= 0 then
             owner:ChatPrint("Invalid owner model! Aborting!")
             abortOwner(victim, owner, positionVictim, positionOwner, victimRagdoll, ownerRagdoll)
-
             return
         end
 
@@ -303,7 +286,6 @@ if SERVER then
             if boneName == nil or ownerRagdoll:LookupBone(boneName) == nil then
                 owner:ChatPrint("Invalid owner model! Aborting!")
                 abortOwner(victim, owner, positionVictim, positionOwner, victimRagdoll, ownerRagdoll)
-
                 return
             end
 
@@ -316,18 +298,13 @@ if SERVER then
                 phys:SetAngles(attackerAng[i])
                 phys:EnableCollisions(false)
                 phys:EnableMotion(true)
-                if i == 2 or i == 5 or i == 7 or i == 10 or i == 13 or i == 14 then
-                    phys:EnableMotion(false)
-                end
+                if i == 2 or i == 5 or i == 7 or i == 10 or i == 13 or i == 14 then phys:EnableMotion(false) end
             end
         end
 
         -- spectate each other (only if player and not npc) and play random sounds
         owner:SpectateEntity(ownerRagdoll)
-        if not victim:IsNPC() and victim:IsPlayer() then
-            victim:SpectateEntity(ownerRagdoll)
-        end
-
+        if not victim:IsNPC() and victim:IsPlayer() then victim:SpectateEntity(ownerRagdoll) end
         local thrustTimerString = "SnuggleThrust_" .. (owner:SteamID64() or "SINGLEPLAYER")
         local boneName = boneNames[11]
         local boneId = ownerRagdoll:LookupBone(boneName)
@@ -336,38 +313,21 @@ if SERVER then
             local phys = ownerRagdoll:GetPhysicsObjectNum(physId)
             if IsValid(phys) then
                 phys:SetVelocity(Vector(0, 0, 100000))
-                timer.Create(
-                    thrustTimerString,
-                    0.3,
-                    0,
-                    function()
-                        phys:SetVelocity(Vector(0, 0, ThrustVelocity))
-                        if IsValid(victimRagdoll) and math.random(5) == 3 then
-                            victimRagdoll:EmitSound(sounds3[math.random(#sounds3)])
-                        end
-                    end
-                )
+                timer.Create(thrustTimerString, 0.3, 0, function()
+                    phys:SetVelocity(Vector(0, 0, ThrustVelocity))
+                    if IsValid(victimRagdoll) and math.random(5) == 3 then victimRagdoll:EmitSound(sounds3[math.random(#sounds3)]) end
+                end)
             end
         end
 
         local soundTimerString = "EmitSnuggleSounds_" .. (owner:SteamID64() or "SINGLEPLAYER")
-        timer.Create(
-            soundTimerString,
-            self.SoundDelay,
-            0,
-            function()
-                if not victimRagdoll:IsValid() then return end
-                victimRagdoll:EmitSound(sounds[math.random(#sounds)])
-            end
-        )
+        timer.Create(soundTimerString, self.SoundDelay, 0, function()
+            if not victimRagdoll:IsValid() then return end
+            victimRagdoll:EmitSound(sounds[math.random(#sounds)])
+        end)
 
         -- check health/give health + positioning of owner/victim and letting the owner move again with no godmode
-        timer.Simple(
-            self.SnuggleLength,
-            function()
-                success(victim, owner, positionVictim, positionOwner, victimRagdoll, ownerRagdoll, soundTimerString, thrustTimerString)
-            end
-        )
+        timer.Simple(self.SnuggleLength, function() success(victim, owner, positionVictim, positionOwner, victimRagdoll, ownerRagdoll, soundTimerString, thrustTimerString) end)
     end
 
     SWEP.NextSecondaryAttack = 0
