@@ -1,6 +1,6 @@
-# sb_snuggle_struggle
+# sb_struggle
 
-sb_snuggle_struggle addon for Garry's Mod.
+sb_struggle addon for Garry's Mod.
 
 More information are available here: 
 https://steamcommunity.com/sharedfiles/filedetails/?id=3009868235
