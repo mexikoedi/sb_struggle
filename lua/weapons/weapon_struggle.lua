@@ -179,16 +179,24 @@ if SERVER then
     end
 
     function SWEP:PrimaryAttack()
-        -- set up postioning stuff and owner/victim checks
+        -- set up postioning stuff and owner/victim checks + activate lag compensation
         local owner = self:GetOwner()
+        if not IsValid(owner) then return end
+        owner:LagCompensation(true)
         local victim = owner:GetEyeTrace().Entity
-        if not IsValid(victim) then return end
-        -- if nextbot or a different entity (not player/npc) then abort
+        if not IsValid(victim) then
+            owner:LagCompensation(false)
+            return
+        end
+
+        -- if nextbot or a different entity (not player/npc) then abort and deactivate lag compensation
         if victim:IsNextBot() then
             owner:ChatPrint("Nextbots are not supported! Aborting!")
+            owner:LagCompensation(false)
             return
         elseif not victim:IsNPC() and not victim:IsPlayer() then
             owner:ChatPrint("Invalid entity! Aborting!")
+            owner:LagCompensation(false)
             return
         end
 
@@ -198,13 +206,18 @@ if SERVER then
             if boneid == nil or victim:LookupBone(bone) == nil then
                 owner:ChatPrint("Invalid victim model! Aborting!")
                 abortVictim(victim, owner)
+                owner:LagCompensation(false)
                 return
             end
         end
 
         local positionOwner = owner:GetPos()
         local positionVictim = victim:GetPos()
-        if positionVictim:Distance(positionOwner) > self.Primary.Distance then return end
+        if positionVictim:Distance(positionOwner) > self.Primary.Distance then
+            owner:LagCompensation(false)
+            return
+        end
+
         owner:EmitSound(self.Primary.Sound)
         -- set owner to godmode with no movement + position him + remove struggle + strip weapons from victim with no movement (if npc then no weapons and dead state to disable movement)
         owner:GodEnable()
@@ -226,7 +239,11 @@ if SERVER then
         local check = 1
         local animationTimerString = "StruggleAnimation_" .. (owner:SteamID64() or "SINGLEPLAYER")
         timer.Create(animationTimerString, 0.1, 0, function()
-            if not victim:IsValid() then return end
+            if not victim:IsValid() then
+                owner:LagCompensation(false)
+                return
+            end
+
             if math.random(5) == 3 then victim:EmitSound(sounds3[math.random(#sounds3)]) end
             for bone, params in pairs(animation["struggle"]) do
                 local boneid = victim:LookupBone(bone)
@@ -239,7 +256,11 @@ if SERVER then
 
         local soundTimerString = "StruggleSound_" .. (owner:SteamID64() or "SINGLEPLAYER")
         timer.Create(soundTimerString, self.SoundDelay, 0, function()
-            if not victim:IsValid() then return end
+            if not victim:IsValid() then
+                owner:LagCompensation(false)
+                return
+            end
+
             if not victim:IsNPC() and not victim:Alive() then
                 check = 0
                 success(victim, owner, animationTimerString, soundTimerString)
@@ -253,8 +274,9 @@ if SERVER then
             victim:EmitSound(sounds[math.random(#sounds)])
         end)
 
-        -- check health/give health + letting the owner move again with no godmode + deal damage + remove timers
+        -- check health/give health + letting the owner move again with no godmode + deal damage + remove timers + deactivate lag compensation
         timer.Simple(self.StruggleLength, function() if check == 1 then success(victim, owner, animationTimerString, soundTimerString) end end)
+        owner:LagCompensation(false)
     end
 
     SWEP.NextSecondaryAttack = 0
