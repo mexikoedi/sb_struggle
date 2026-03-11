@@ -3,13 +3,14 @@ if SERVER then
     AddCSLuaFile()
     resource.AddFile("materials/vgui/entities/weapon_struggle.vmt")
     resource.AddFile("materials/HUD/killicons/weapon_struggle.vmt")
+    util.AddNetworkString("SBStruggleSetVictimThirdperson")
 end
 
 SWEP.PrintName = "Struggle"
 SWEP.Author = "mexikoedi"
 SWEP.Contact = "Steam"
-SWEP.Instructions = "Left click to arrest and kill the enemy and secondary attack to play random sounds."
-SWEP.Purpose = "Taunt and arrest and kill your enemies."
+SWEP.Instructions = "Left click to arrest and kill the enemy. Secondary attack to play random sounds."
+SWEP.Purpose = "Taunt, arrest and kill your enemies."
 SWEP.Category = "mexikoedi's SWEPS"
 SWEP.DrawWeaponInfoBox = true
 SWEP.BounceWeaponIcon = true
@@ -110,6 +111,13 @@ function SWEP:DrawWeaponSelection(x, y, w, h, a)
 end
 
 if SERVER then
+    local function SetVictimThirdperson(ply, enabled)
+        if not IsValid(ply) then return end
+        net.Start("SBStruggleSetVictimThirdperson")
+        net.WriteBool(enabled)
+        net.Send(ply)
+    end
+
     -- damage/inflictor code
     local function InstantDamage(ply, damage, attacker, inflictor)
         local dmg = DamageInfo()
@@ -147,6 +155,7 @@ if SERVER then
         owner:SelectWeapon("weapon_struggle")
     end
 
+    -- revert changes from before and add damage
     local function success(victim, owner, animationTimerString, soundTimerString)
         if IsValid(owner) then
             if owner:Health() < 100 then owner:SetHealth(100) end
@@ -158,10 +167,14 @@ if SERVER then
             owner:GodDisable()
         end
 
-        -- revert changes from before and add damage
         if IsValid(victim) then
             if not victim:IsNPC() and victim:IsPlayer() then
-                victim:Freeze(false)
+                SetVictimThirdperson(victim, false)
+                victim:SetJumpPower(160)
+                victim:SetCrouchedWalkSpeed(0.3)
+                victim:SetRunSpeed(220)
+                victim:SetWalkSpeed(220)
+                victim:SetMaxSpeed(220)
                 local bonecount = victim:GetBoneCount()
                 for i = 0, bonecount do
                     victim:ManipulateBonePosition(i, Vector(0, 0, 0))
@@ -219,7 +232,7 @@ if SERVER then
         end
 
         owner:EmitSound(self.Primary.Sound)
-        -- set owner to godmode with no movement + position him + remove struggle + strip weapons from victim with no movement (if npc then no weapons and dead state to disable movement)
+        -- set owner to godmode with no movement + position him + remove struggle + strip weapons from victim with no movement and thirdperson (if npc then no weapons and dead state to disable movement)
         owner:GodEnable()
         owner:SetJumpPower(1)
         owner:SetCrouchedWalkSpeed(0.1)
@@ -229,7 +242,12 @@ if SERVER then
         owner:StripWeapon("weapon_struggle")
         if not victim:IsNPC() and victim:IsPlayer() then
             victim:StripWeapons()
-            victim:Freeze(true)
+            victim:SetJumpPower(1)
+            victim:SetCrouchedWalkSpeed(0.1)
+            victim:SetRunSpeed(1)
+            victim:SetWalkSpeed(1)
+            victim:SetMaxSpeed(1)
+            SetVictimThirdperson(victim, true)
         elseif victim:IsNPC() then
             victim:DropWeapon()
             victim:SetNPCState(NPC_STATE_PLAYDEAD)
@@ -291,4 +309,36 @@ if SERVER then
         -- set up random sounds
         owner:EmitSound(sounds2[math.random(#sounds2)])
     end
+end
+
+if CLIENT then
+    net.Receive("SBStruggleSetVictimThirdperson", function()
+        local struggleThirdpersonEnabled = false
+        struggleThirdpersonEnabled = net.ReadBool()
+        if not struggleThirdpersonEnabled then
+            hook.Remove("CalcView", "SBStruggleVictimThirdperson")
+            return
+        end
+
+        hook.Add("CalcView", "SBStruggleVictimThirdperson", function(ply, origin, angles, fov)
+            if not IsValid(ply) then return end
+            if ply ~= LocalPlayer() then return end
+            if not struggleThirdpersonEnabled then return end
+            local view = {}
+            view.angles = angles
+            view.fov = fov
+            view.drawviewer = true
+            local desiredOrigin = origin - angles:Forward() * 90 + Vector(0, 0, 20)
+            local tr = util.TraceHull({
+                start = origin,
+                endpos = desiredOrigin,
+                mins = Vector(-4, -4, -4),
+                maxs = Vector(4, 4, 4),
+                filter = ply
+            })
+
+            view.origin = tr.Hit and tr.HitPos + tr.HitNormal * 5 or desiredOrigin
+            return view
+        end)
+    end)
 end
